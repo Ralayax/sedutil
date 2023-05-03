@@ -29,11 +29,46 @@ along with sedutil.  If not, see <http://www.gnu.org/licenses/>.
 extern "C" {
 #include "pbkdf2.h"
 #include "sha1.h"
+#include "sha2.h"
+#include "sha3.h"
 }
 using namespace std;
 
+/** Converts the hashing function enum to the relevant function pointer.
+ * Used to not expose the interna cifra library
+ * @param primitive The hashing function the user wants a pointer to
+ */
+const cf_chash* hashFnPtr(HashAlgorithm::Function const& primitive) {
+    switch(primitive) {
+        case HashAlgorithm::Function::sha1 :
+            return &cf_sha1;
+        case HashAlgorithm::Function::sha2_256 :
+            return &cf_sha256;
+        case HashAlgorithm::Function::sha2_384 :
+            return &cf_sha384;
+        case HashAlgorithm::Function::sha2_512 :
+            return &cf_sha512;
+        case HashAlgorithm::Function::sha3_256 :
+            return &cf_sha3_256;
+        case HashAlgorithm::Function::sha3_384 :
+            return &cf_sha3_384;
+        case HashAlgorithm::Function::sha3_512 :
+            return &cf_sha3_512;
+        default :
+            return &cf_sha3_512;
+    }
+}
+
+/** Hash a password using the PBDKF2<SHA1> function 
+ *
+ * @param hash Field where hash returned
+ * @param password password to be hashed
+ * @param salt salt to be used in the hash
+ * @param iter number of iterations to be preformed 
+ * @param hashsize size of hash to be returned
+ */
 void DtaHashPassword(vector<uint8_t> &hash, const  vector<uint8_t>& password,
-    const vector<uint8_t>& salt, unsigned int iter, uint8_t hashsize)
+    const vector<uint8_t>& salt, unsigned int iter, uint8_t hashsize, const cf_chash* hash_fnptr)
 {
 	LOG(D1) << " Entered DtaHashPassword";
 	// if the hashsize can be > 255 the token overhead logic needs to be fixed
@@ -41,7 +76,7 @@ void DtaHashPassword(vector<uint8_t> &hash, const  vector<uint8_t>& password,
 	if (253 < hashsize) { LOG(E) << "Hashsize > 253 incorrect token generated"; }
 	
 	hash.clear();
-	// don't hash the devault OPAL password ''
+	// don't hash the default OPAL password ''
 	if (0 == password.size()) {
 		goto exit;
 	}
@@ -54,10 +89,8 @@ void DtaHashPassword(vector<uint8_t> &hash, const  vector<uint8_t>& password,
 		salt.data(), salt.size(),
 		iter,
 		hash.data(), hash.size(),
-		&cf_sha1);
+		hash_fnptr);
 
-//	gc_pbkdf2_sha1(password, strnlen(password, 256), (const char *)salt.data(), salt.size(), iter,
-//		(char *)hash.data(), hash.size());
 exit:	// add the token overhead
 	hash.insert(hash.begin(), (uint8_t)hash.size());
 	hash.insert(hash.begin(), 0xd0);
@@ -65,6 +98,7 @@ exit:	// add the token overhead
 
 void DtaHashPwd(vector<uint8_t> &hash, char * password, DtaDev * d)
 {
+    HashAlgorithm algorithm = pbaPreset();
     LOG(D1) << " Entered DtaHashPwd";
     char *serNum;
     vector<uint8_t> decoded_password;
@@ -97,10 +131,12 @@ void DtaHashPwd(vector<uint8_t> &hash, char * password, DtaDev * d)
     }
     serNum = d->getSerialNum();
     vector<uint8_t> salt(serNum, serNum + 20);
-    //	vector<uint8_t> salt(DEFAULTSALT);
-    DtaHashPassword(hash, decoded_password, salt);
+
+    HashAlgorithm algorithm = HashAlgorithm::chubbyAntPreset();
+    DtaHashPassword(hash, decoded_password, salt, algorithm.iter, algorithm.hashsize, hashFnPtr(algorithm.function));
     LOG(D1) << " Exit DtaHashPwd"; // log for hash timing
 }
+
 
 struct PBKDF_TestTuple
 {
@@ -124,7 +160,7 @@ int testresult(std::vector<uint8_t> &result, const char * expected, size_t len) 
 }
 
 int Testsedutil(const PBKDF_TestTuple *testSet, unsigned int testSetSize)
-{
+{   
     int pass = 1;
     std::vector<uint8_t> hash, seaSalt, password;
 
@@ -138,7 +174,7 @@ int Testsedutil(const PBKDF_TestTuple *testSet, unsigned int testSetSize)
 		printf("Password %s Salt %s Iterations %i Length %i\n", (char *)tuple.Password,
 			(char *) tuple.Salt, tuple.iterations, tuple.hashlen);
         password.assign(tuple.Password, tuple.Password+strlen(tuple.Password));
-		DtaHashPassword(hash, password, seaSalt, tuple.iterations, tuple.hashlen);
+		DtaHashPassword(hash, password, seaSalt, tuple.iterations, tuple.hashlen, &cf_sha1);
 		int fail = (testresult(hash, tuple.hexDerivedKey, tuple.hashlen) == 0);
         pass = pass & fail;
     }
