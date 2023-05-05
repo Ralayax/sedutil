@@ -19,6 +19,7 @@ along with sedutil.  If not, see <http://www.gnu.org/licenses/>.
  * C:E********************************************************************** */
 #pragma once
 #include <vector>
+#include <stdint.h>
 class DtaDev;
 
 using namespace std;
@@ -70,6 +71,7 @@ struct HashAlgorithm {
                 return {
                         Function::sha3_512,
                         500000,
+                        32
                 };
         }
 };
