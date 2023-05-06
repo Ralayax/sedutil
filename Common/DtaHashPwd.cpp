@@ -136,8 +136,7 @@ void DtaHashPwd(vector<uint8_t> &hash, char * password, DtaDev * d)
         return;
     }
     char *serNum = d->getSerialNum();
-    vector<uint8_t> salt(serNum, serNum+strlen(serNum));
-    salt.resize(20);
+    vector<uint8_t> salt(serNum, serNum+20);
 
     HashAlgorithm algorithm = HashAlgorithm::chubbyAntPreset();
     hash = hashPassword(decoded_password, salt, algorithm);
