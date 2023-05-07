@@ -20,6 +20,8 @@ along with sedutil.  If not, see <http://www.gnu.org/licenses/>.
 #include "os.h"
 #include <iostream>
 #include <iomanip>
+#include <string_view>
+#include <charconv>
 #include "DtaHashPwd.h"
 #include "DtaLexicon.h"
 #include "DtaOptions.h"
@@ -101,21 +103,27 @@ vector<uint8_t> hashPassword(vector<uint8_t> const& password, vector<uint8_t> co
     return DtaHashPassword(password, salt, algorithm.iter, algorithm.hashsize, hashFnPtr(algorithm.function));
 }
 
+vector<uint8_t> decode_hex_password(std::string_view password) {
+    vector<uint8_t> decoded_password;
+    decoded_password.reserve(password.length()/2);
+    for (unsigned int i = 0; i+1 < password.length(); i += 2) {
+        std::string_view pairOfChars = password.substr(i, 2);
+        int byte = 0;
+        if (std::from_chars(pairOfChars.begin(), pairOfChars.end(), byte, 16).ec != std::errc{}) {
+            LOG(E) << "Invalid hex characters provided, password truncated";
+            break;
+        }
+        decoded_password.push_back(byte);
+    }
+    return decoded_password;
+}
+
 vector<uint8_t> decode_password(char* password, bool hex_passwords) {
     if(!hex_passwords) {
         return vector<uint8_t>(password, password + strlen(password));
     }
-
-    vector<uint8_t> decoded_password;
-    for (char* p=password; *p; ++p)
-    {
-        uint8_t num1 = (uint8_t)(*p & 0x40 ? (*p & 0xf) + 9 : *p & 0xf);
-        ++p;
-        if (*p == 0)
-            break;
-        uint8_t num2 = (uint8_t)(*p & 0x40 ? (*p & 0xf) + 9 : *p & 0xf);
-        decoded_password.push_back(num1 * 16 + num2);
-    }
+    
+    vector<uint8_t> decoded_password = decode_hex_password(password);
     return decoded_password;
 }
 
