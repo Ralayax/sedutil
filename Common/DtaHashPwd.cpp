@@ -69,7 +69,7 @@ const cf_chash* hashFnPtr(HashAlgorithm::Function const& primitive) {
  * @param iter number of iterations to be preformed 
  * @param hashsize size of hash to be returned
  */
-vector<uint8_t> DtaHashPassword(vector<uint8_t> const& password,
+/*vector<uint8_t> DtaHashPassword(vector<uint8_t> const& password,
     const vector<uint8_t>& salt, unsigned int iter, uint8_t hashsize, const cf_chash* hash_fnptr)
 {
     vector<uint8_t> hash;
@@ -93,9 +93,43 @@ vector<uint8_t> DtaHashPassword(vector<uint8_t> const& password,
 		hash.data(), hash.size(),
 		hash_fnptr);
 
+    LOG(D1) << hash.size();
+
 exit:	// add the token overhead
 	hash.insert(hash.begin(), (uint8_t)hash.size());
 	hash.insert(hash.begin(), 0xd0);
+
+    for(uint i=0; i<hash.size(); ++i) {
+        LOG(D1) << i << "," << (int)hash[i];
+    } 
+    return hash;
+}*/
+
+vector<uint8_t> DtaHashPassword(vector<uint8_t> const& password,
+    const vector<uint8_t>& salt, unsigned int iter, uint8_t hashsize, const cf_chash* hash_fnptr) {
+    
+    LOG(D1) << " Entered DtaHashPassword";
+
+	// if the hashsize can be > 255 the token overhead logic needs to be fixed
+	assert(1 == sizeof(hashsize));
+	if (253 < hashsize) { LOG(E) << "Hashsize > 253 incorrect token generated"; }
+	
+	// don't hash the default OPAL password ''
+	if (0 == password.size()) {
+		return {0xd0,0};
+	}
+    
+    vector<uint8_t> hash(hashsize + 2);
+    hash[0] = 0xd0;
+    hash[1] = (uint8_t)hashsize;
+    LOG(D1) << hash.size();
+	
+	cf_pbkdf2_hmac(password.data(), password.size(),
+		salt.data(), salt.size(),
+		iter,
+		hash.data()+2, hashsize,
+		hash_fnptr);
+
     return hash;
 }
 
