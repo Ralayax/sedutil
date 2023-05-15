@@ -40,96 +40,115 @@ using namespace std;
  * Used to not expose the interna cifra library
  * @param primitive The hashing function the user wants a pointer to
  */
-const cf_chash* hashFnPtr(HashAlgorithm::Function const& primitive) {
+const cf_chash* hashFnPtr(HashingAlgorithm::Function const& primitive) {
     switch(primitive) {
-        case HashAlgorithm::Function::sha1 :
+        case HashingAlgorithm::Function::sha1 :
             return &cf_sha1;
-        case HashAlgorithm::Function::sha2_256 :
+        case HashingAlgorithm::Function::sha2_256 :
             return &cf_sha256;
-        case HashAlgorithm::Function::sha2_384 :
+        case HashingAlgorithm::Function::sha2_384 :
             return &cf_sha384;
-        case HashAlgorithm::Function::sha2_512 :
+        case HashingAlgorithm::Function::sha2_512 :
             return &cf_sha512;
-        case HashAlgorithm::Function::sha3_256 :
+        case HashingAlgorithm::Function::sha3_256 :
             return &cf_sha3_256;
-        case HashAlgorithm::Function::sha3_384 :
+        case HashingAlgorithm::Function::sha3_384 :
             return &cf_sha3_384;
-        case HashAlgorithm::Function::sha3_512 :
+        case HashingAlgorithm::Function::sha3_512 :
             return &cf_sha3_512;
         default :
             return &cf_sha3_512;
     }
 }
 
-/** Hash a password using the PBDKF2<SHA1> function 
- *
- * @param hash Field where hash returned
- * @param password password to be hashed
- * @param salt salt to be used in the hash
- * @param iter number of iterations to be preformed 
- * @param hashsize size of hash to be returned
- */
-vector<uint8_t> DtaHashPassword(vector<uint8_t> const& password,
-    const vector<uint8_t>& salt, unsigned int iter, uint8_t hashsize, const cf_chash* hash_fnptr) {
-    
-    LOG(D1) << " Entered DtaHashPassword";
-
-	// if the hashsize can be > 255 the token overhead logic needs to be fixed
-	assert(1 == sizeof(hashsize));
-	if (253 < hashsize) { LOG(E) << "Hashsize > 253 incorrect token generated"; }
-	
-	// don't hash the default OPAL password ''
-	if (0 == password.size()) {
-		return {0xd0,0};
-	}
-    
-    vector<uint8_t> hash(hashsize + 2);
-    hash[0] = 0xd0;
-    hash[1] = (uint8_t)hashsize;
-    LOG(D1) << hash.size();
-	
-	cf_pbkdf2_hmac(password.data(), password.size(),
-		salt.data(), salt.size(),
-		iter,
-		hash.data()+2, hashsize,
-		hash_fnptr);
-
-    return hash;
-}
-
-vector<uint8_t> hashPassword(vector<uint8_t> const& password, vector<uint8_t> const& salt, HashAlgorithm const& algorithm) {
-    return DtaHashPassword(password, salt, algorithm.iter, algorithm.hashsize, hashFnPtr(algorithm.function));
-}
-
-vector<uint8_t> decode_hex_password(std::string_view password) {
+vector<uint8_t> decodeHexPassword(std::string_view password) {
     vector<uint8_t> decoded_password;
     decoded_password.reserve(password.length()/2);
     for (unsigned int i = 0; i+1 < password.length(); i += 2) {
         std::string_view pairOfChars = password.substr(i, 2);
         int byte = 0;
         if (std::from_chars(pairOfChars.begin(), pairOfChars.end(), byte, 16).ec != std::errc{}) {
-            LOG(E) << "Invalid hex characters provided, password truncated";
-            break;
+            LOG(E) << "Invalid hex characters provided";
+            //abort();
         }
+        LOG(E) << pairOfChars;
         decoded_password.push_back(byte);
     }
     return decoded_password;
 }
 
-vector<uint8_t> decode_password(char* password, bool hex_passwords) {
+vector<uint8_t> decodePassword(string_view password, bool hex_passwords) {
     if(!hex_passwords) {
-        return vector<uint8_t>(password, password + strlen(password));
+        return vector<uint8_t>(password.begin(), password.end());
     }
     
-    vector<uint8_t> decoded_password = decode_hex_password(password);
-    return decoded_password;
+    vector<uint8_t> decodedPassword = decodeHexPassword(password);
+    return decodedPassword;
+}
+
+std::vector<uint8_t> HashingAlgorithm::hash(vector<uint8_t> const& password) const {
+    LOG(D1) << " Entered HashingAlgorithm::hash";
+
+	// if the hashsize can be > 255 the token overhead logic needs to be fixed
+	assert(1 == sizeof(hashsize));
+	if (253 < hashsize) {
+        LOG(E) << "Hashsize > 253 incorrect token generated";
+        //abort();
+    }
+	
+	// don't hash the default OPAL password '' and just return the token header
+	if (0 == password.size()) {
+		return {0xd0, 0x00};
+	}
+    
+    vector<uint8_t> hash(hashsize + 2);
+    hash[0] = 0xd0;
+    hash[1] = (uint8_t)hashsize;
+
+    auto true_hash_begin = hash.begin()+2;
+	
+	cf_pbkdf2_hmac(password.data(), password.size(),
+		salt.data(), salt.size(),
+		iter,
+		&*true_hash_begin, hashsize,
+		hashFnPtr(function));
+
+    return hash;
+}
+
+std::vector<uint8_t> NoHashing::hash(vector<uint8_t> const& password) const {
+    int hashsize = std::min(password.size(), 32UL);
+
+    std::vector<uint8_t> hash;
+    hash.reserve(hashsize + 2);
+    hash[0] = 0xd0;
+    hash[1] = (uint8_t)hashsize;
+    hash.insert(hash.end(), password.begin(), password.end());
+
+    return hash;
+}
+
+std::vector<uint8_t> PasswordProcessor::process(std::string_view password) const {
+    vector<uint8_t> decodedPassword;
+    if(!hex_password) {
+        decodedPassword = vector<uint8_t>(password.begin(), password.end());
+    } else {
+        decodedPassword = decodeHexPassword(password);
+    }
+
+    if(auto const* hashingAlgorithm = std::get_if<HashingAlgorithm>(&hasher)) {
+        return hashingAlgorithm->hash(decodedPassword);
+    } else {
+        auto const* noHashing = std::get_if<NoHashing>(&hasher);
+        return noHashing->hash(decodedPassword);
+    }
 }
 
 void DtaHashPwd(vector<uint8_t> &hash, char * password, DtaDev * d)
 {
     LOG(D1) << " Entered DtaHashPwd";
     
-    auto decoded_password = decode_password(password, d->hex_passwords);
+    auto decoded_password = decodePassword(password, d->hex_passwords);
     
     if (d->no_hash_passwords) {
         if (decoded_password.size() > 32)
@@ -144,8 +163,8 @@ void DtaHashPwd(vector<uint8_t> &hash, char * password, DtaDev * d)
     char *serNum = d->getSerialNum();
     vector<uint8_t> salt(serNum, serNum+20);
 
-    HashAlgorithm algorithm = HashAlgorithm::chubbyAntPreset();
-    hash = hashPassword(decoded_password, salt, algorithm);
+    HashingAlgorithm algorithm = HashingAlgorithm::chubbyAntPreset(salt);
+    hash = algorithm.hash(decoded_password);
     LOG(D1) << " Exit DtaHashPwd"; // log for hash timing
 }
 
@@ -186,7 +205,8 @@ int Testsedutil(const PBKDF_TestTuple *testSet, unsigned int testSetSize)
 		printf("Password %s Salt %s Iterations %i Length %i\n", (char *)tuple.Password,
 			(char *) tuple.Salt, tuple.iterations, tuple.hashlen);
         password.assign(tuple.Password, tuple.Password+strlen(tuple.Password));
-		hash = DtaHashPassword(password, seaSalt, tuple.iterations, tuple.hashlen, &cf_sha1);
+        HashingAlgorithm algorithm{HashingAlgorithm::Function::sha1, tuple.iterations, tuple.hashlen, seaSalt};
+        hash = algorithm.hash(password);
 		int fail = (testresult(hash, tuple.hexDerivedKey, tuple.hashlen) == 0);
         pass = pass & fail;
     }
