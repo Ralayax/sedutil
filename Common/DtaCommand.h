@@ -20,6 +20,7 @@ along with sedutil.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 #include <vector>
+#include <cstdint>
 #include "DtaLexicon.h"
 class DtaDevOpal;
 class DtaDevEnterprise;
