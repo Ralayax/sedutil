@@ -18,6 +18,7 @@ along with sedutil.  If not, see <http://www.gnu.org/licenses/>.
 
  * C:E********************************************************************** */
 #pragma once
+#include "DtaHashPwd.h"
 #include "DtaStructures.h"
 #include "DtaLexicon.h"
 #include <vector>

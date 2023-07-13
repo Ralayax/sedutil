@@ -21,6 +21,9 @@ along with sedutil.  If not, see <http://www.gnu.org/licenses/>.
 #include "DtaOptions.h"
 #include "DtaLexicon.h"
 #include "Version.h"
+
+#include <cstdio>
+
 void usage()
 {
     printf("sedutil v%s Copyright 2014-2017 Bright Plaza Inc. <drivetrust@drivetrust.com>\n", GIT_VERSION);
