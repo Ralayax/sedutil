@@ -4,6 +4,9 @@ This software is Copyright 2014-2017 Bright Plaza Inc. <drivetrust@drivetrust.co
 
 This file is part of sedutil.
 
+Drive Trust alliance seems to have abandonned support for the project, this
+repo aims to take over maintenance from here.
+
 sedutil is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -22,7 +25,7 @@ sedutil - The Drive Trust Alliance Self Encrypting Drive Utility
 
 This program and it's accompanying Pre-Boot Authorization image allow
 you to enable the locking in SED's that comply with the TCG OPAL 2.00
-standard on bios machines.   
+standard on bios machines.
 
 You must be administrator/root to run the host management program
 
@@ -33,7 +36,15 @@ to the kernel flags at boot time or changing the contents of
 a running system if possible will accomplish this. NVMe drives
 do not need this parameter.
 
-***** sleep (S3) is not supported.
+This version supports S3-Sleep (suspend to RAM) for convenience,
+which gives the sleeping kernel the hash of the password to resume.
+This is less secure than S4-Hibernation (suspend to disk), which will reboot
+the computer and start the PBA again.
+
+Custom password hashing functions can also be chosen at runtime,
+with support for all known forks (DTA, ladar, ChubbyAnt, badicsalex and Ralayax).
+ChubbyAnt's preset is used by default as it offers better security than the
+official DTA preset and appears to have been used a lot.
 
 Source code is available on GitHub at https://github.com/Drive-Trust-Alliance/sedutil 
 
