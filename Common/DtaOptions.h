@@ -30,6 +30,14 @@ typedef enum _sedutiloutput {
 	sedutilJSON
 } sedutiloutput;
 
+typedef enum _password_hashing_options_t {
+	chubbyant_preset, //default
+	no_hashing,
+	dta_preset,
+	ladar_preset,
+	ralayax_preset
+} password_hashing_options_t;
+
 /** Structure representing the command line issued to the program */
 typedef struct _DTA_OPTIONS {
     uint8_t password;   /**< password supplied */
@@ -46,6 +54,7 @@ typedef struct _DTA_OPTIONS {
 
 	bool no_hash_passwords; /** global parameter, disables hashing of passwords */
     bool hex_passwords; /** global parameter, all incoming passwords are treated as hex-encoded */
+	password_hashing_options_t password_hashing_options;
 	sedutiloutput output_format;
 } DTA_OPTIONS;
 /** Print a usage message */

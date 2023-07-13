@@ -294,6 +294,7 @@ public:
 	virtual uint16_t comID() = 0;
 	bool no_hash_passwords; /** disables hashing of passwords */
 	bool hex_passwords; /** converts passwords from hex before using them */
+	password_hashing_options_t password_hashing_options;
 	sedutiloutput output_format; /** standard, readable, JSON */
 protected:
 	const char * dev;   /**< character string representing the device in the OS lexicon */

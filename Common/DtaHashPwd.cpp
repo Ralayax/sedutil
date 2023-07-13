@@ -150,15 +150,47 @@ std::vector<uint8_t> PasswordProcessor::process(std::string_view password) const
 
 void DtaHashPwd(vector<uint8_t> &hash, char * password, DtaDev * d)
 {
-    if(d->no_hash_passwords) {
+    switch (d->password_hashing_options) {
+        case no_hashing: {
+            PasswordProcessor processor {d->hex_passwords,
+                                     NoHashing()};
+            hash = processor.process(password);
+            break;
+        }
+        case dta_preset:{
+            PasswordProcessor processor {d->hex_passwords,
+                                     HashingAlgorithm::dtaPreset(serialNumToSalt(d->getSerialNum()))};
+            hash = processor.process(password);
+            break;
+        }
+        case ladar_preset:{
+            PasswordProcessor processor {d->hex_passwords,
+                                     HashingAlgorithm::ladarPreset(serialNumToSalt(d->getSerialNum()))};
+            hash = processor.process(password);
+            break;
+        }
+        case chubbyant_preset:{
+            PasswordProcessor processor {d->hex_passwords,
+                                     HashingAlgorithm::chubbyAntPreset(serialNumToSalt(d->getSerialNum()))};
+            hash = processor.process(password);
+            break;
+        }
+        case ralayax_preset:{
+            PasswordProcessor processor {d->hex_passwords,
+                                     HashingAlgorithm::ralayaxPreset(serialNumToSalt(d->getSerialNum()))};
+            hash = processor.process(password);
+            break;
+        } 
+    }
+    /*if(d->password_hashing_options == no_hashing) {
         PasswordProcessor processor {d->hex_passwords,
                                      NoHashing()};
         hash = processor.process(password);
-    } else {
+    } else if {
         PasswordProcessor processor {d->hex_passwords,
                                      HashingAlgorithm::chubbyAntPreset(serialNumToSalt(d->getSerialNum()))};
         hash = processor.process(password);
-    }
+    }*/
 
     LOG(D1) << " Exit DtaHashPwd"; // log for hash timing
 }

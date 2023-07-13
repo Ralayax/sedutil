@@ -32,9 +32,14 @@ void usage()
     printf("General Usage:                     (see readme for extended commandset)\n");
     printf("sedutil-cli <-v> <-n> <-x> <action> <options> <device>\n");
     printf("-v (optional)                       increase verbosity, one to five v's\n");
-    printf("-n (optional)                       no password hashing. Passwords will be sent in clear text!\n");
+    //printf("-n (optional)                       no password hashing. Passwords will be sent in clear text!\n");
     printf("-l (optional)                       log style output to stderr only\n");
     printf("-x (optional)                       password inputs are in hex form\n");
+	printf("--no-hashing (optional)             no password hashing. Passwords will be sent in clear text!\n");
+	printf("--dta-hashing (optional)            use DTA hashing preset\n");
+	printf("--ladar-hashing (optional)          use ladar hashing preset\n");
+	printf("--chubbyant-hashing (optional)      use ChubbyAnt hashing preset\n");
+	printf("--ralayax-hashing (optional)        use Ralayax hashing preset\n");
     printf("actions \n");
     printf("--scan \n");
     printf("                                Scans the devices on the system \n");
@@ -140,11 +145,31 @@ uint8_t DtaOptions(int argc, char * argv[], DTA_OPTIONS * opts)
 			LOG(D) << "Log level set to " << CLog::ToString(CLog::FromInt(loggingLevel));
 			LOG(D) << "sedutil version : " << GIT_VERSION;
 		}
-		else if (!(strcmp("-n", argv[i]))) {
-                        baseOptions += 1;
-			opts->no_hash_passwords = true;
+		else if (!(strcmp("--no-hashing", argv[i]))) {
+            baseOptions += 1;
+			opts->password_hashing_options = no_hashing;
 			LOG(D) << "Password hashing is disabled";
-                }
+        }
+		else if (!(strcmp("--dta-hashing", argv[i]))) {
+            baseOptions += 1;
+			opts->password_hashing_options = dta_preset;
+			LOG(D) << "Using DTA hashing preset";
+        }
+		else if (!(strcmp("--ladar-hashing", argv[i]))) {
+            baseOptions += 1;
+			opts->password_hashing_options = ladar_preset;
+			LOG(D) << "Using ladar hashing preset";
+        }
+		else if (!(strcmp("--chubbyant-hashing", argv[i]))) {
+            baseOptions += 1;
+			opts->password_hashing_options = chubbyant_preset;
+			LOG(D) << "Using ChubbyAnt hashing preset";
+        }
+		else if (!(strcmp("--ralayax-hashing", argv[i]))) {
+            baseOptions += 1;
+			opts->password_hashing_options = ralayax_preset;
+			LOG(D) << "Using Ralayax hashing preset";
+        }
 		else if (!strcmp("-l", argv[i])) {
 			baseOptions += 1;
 			opts->output_format = sedutilNormal;

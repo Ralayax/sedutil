@@ -22,6 +22,7 @@ along with sedutil.  If not, see <http://www.gnu.org/licenses/>.
 #include <variant>
 #include <cstdint>
 #include <string_view>
+#include <optional>
 class DtaDev;
 
 /** Dummy class describing the hashing algorithm to be used for hashing the password

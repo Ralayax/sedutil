@@ -95,6 +95,8 @@ int main(int argc, char * argv[])
 
 		d->hex_passwords = opts.hex_passwords;
 
+		d->password_hashing_options = opts.password_hashing_options;
+
 		d->output_format = opts.output_format;
 	}
 
