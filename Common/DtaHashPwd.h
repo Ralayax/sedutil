@@ -54,8 +54,10 @@ struct HashingAlgorithm {
         uint8_t hashsize; /**< Hash output size */
         std::vector<uint8_t> salt; /**< Salt */
 
+        static std::vector<uint8_t> serialNumToSalt(char* serialNum);
+
         /** DTA Preset constructor, backwards compatible with official DTA sedutil
-         * Uses 75000 of unsecure sha1
+         * Uses 75000 iterations of unsecure sha1
          *
          * @param salt The hashing salt to be used
          */

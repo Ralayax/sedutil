@@ -86,6 +86,10 @@ vector<uint8_t> decodePassword(string_view password, bool hex_passwords) {
     return decodedPassword;
 }
 
+std::vector<uint8_t> serialNumToSalt(char* serialNum) {
+    return std::vector<uint8_t>(serialNum, serialNum+20);
+}
+
 std::vector<uint8_t> HashingAlgorithm::hash(vector<uint8_t> const& password) const {
     LOG(D1) << " Entered HashingAlgorithm::hash";
 
@@ -146,25 +150,16 @@ std::vector<uint8_t> PasswordProcessor::process(std::string_view password) const
 
 void DtaHashPwd(vector<uint8_t> &hash, char * password, DtaDev * d)
 {
-    LOG(D1) << " Entered DtaHashPwd";
-    
-    auto decoded_password = decodePassword(password, d->hex_passwords);
-    
-    if (d->no_hash_passwords) {
-        if (decoded_password.size() > 32)
-            decoded_password.resize(32);
-        hash = decoded_password;
-        // add the token overhead
-        hash.insert(hash.begin(), (uint8_t)hash.size());
-        hash.insert(hash.begin(), 0xd0);
-        LOG(D1) << " Exit DtaHashPwd";
-        return;
+    if(d->no_hash_passwords) {
+        PasswordProcessor processor {d->hex_passwords,
+                                     NoHashing()};
+        hash = processor.process(password);
+    } else {
+        PasswordProcessor processor {d->hex_passwords,
+                                     HashingAlgorithm::chubbyAntPreset(serialNumToSalt(d->getSerialNum()))};
+        hash = processor.process(password);
     }
-    char *serNum = d->getSerialNum();
-    vector<uint8_t> salt(serNum, serNum+20);
 
-    HashingAlgorithm algorithm = HashingAlgorithm::chubbyAntPreset(salt);
-    hash = algorithm.hash(decoded_password);
     LOG(D1) << " Exit DtaHashPwd"; // log for hash timing
 }
 
