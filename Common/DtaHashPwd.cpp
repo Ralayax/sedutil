@@ -182,15 +182,6 @@ void DtaHashPwd(vector<uint8_t> &hash, char * password, DtaDev * d)
             break;
         } 
     }
-    /*if(d->password_hashing_options == no_hashing) {
-        PasswordProcessor processor {d->hex_passwords,
-                                     NoHashing()};
-        hash = processor.process(password);
-    } else if {
-        PasswordProcessor processor {d->hex_passwords,
-                                     HashingAlgorithm::chubbyAntPreset(serialNumToSalt(d->getSerialNum()))};
-        hash = processor.process(password);
-    }*/
 
     LOG(D1) << " Exit DtaHashPwd"; // log for hash timing
 }
